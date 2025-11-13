@@ -1,23 +1,7 @@
 // routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-
-const productFilePath = path.join(__dirname, '../db/product.json');
-
-
-// Função para ler os dados do arquivo
-const readProduct = () => {
-  const data = fs.readFileSync(productFilePath, 'utf-8');
-  return JSON.parse(data);
-};
-
-// Função para escrever os dados no arquivo
-const writeProduct = (data) => {
-  fs.writeFileSync(productFilePath, JSON.stringify(data, null, 2));
-};
+const Product = require('../models/Product');
 
 
 /**
@@ -126,9 +110,13 @@ const writeProduct = (data) => {
  *                  example: "Erro na requisição."
  */
 // Rota para listar todos os produtos (GET)
-router.get('/', (req, res) => {
-  const product = readProduct();
-  res.json(product);
+router.get('/', async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
@@ -166,13 +154,15 @@ router.get('/', (req, res) => {
  *                  example: "produto não encontrado."
  */
 // Rota para listar um produto por ID
-router.get('/:id', (req, res) => {
-  const products = readProduct();
-  const product = products.find(s => s.id === req.params.id);
-  if (product) {
+router.get('/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Produto não encontrado." });
+    }
     res.json(product);
-  } else {
-    res.status(404).json({ message: "Produto não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -211,13 +201,15 @@ router.get('/:id', (req, res) => {
  *                  example: "Produto não encontrado."
  */
 // Rota para listar um produto por nome
-router.get('/name/:name', (req, res) => {
-  const products = readProduct();
-  const product = products.find(s => s.name === req.params.name);
-  if (product) {
+router.get('/name/:name', async (req, res) => {
+  try {
+    const product = await Product.findOne({ name: req.params.name });
+    if (!product) {
+      return res.status(404).json({ message: "Produto não encontrado." });
+    }
     res.json(product);
-  } else {
-    res.status(404).json({ message: "Produto não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -264,15 +256,14 @@ router.get('/name/:name', (req, res) => {
  *                  example: "Erro interno do servidor."
  */
 // Rota para cadastrar um novo produto
-router.post('/', (req, res) => {
-  const product = readProduct();
-  const newSupplier = {
-    id: uuidv4(),
-    ...req.body
-  };
-  product.push(newSupplier);
-  writeProduct(product);
-  res.status(201).json(newSupplier);
+router.post('/', async (req, res) => {
+  try {
+    const product = new Product(req.body);
+    const newProduct = await product.save();
+    res.status(201).json(newProduct);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 });
 
 /**
@@ -306,16 +297,20 @@ router.post('/', (req, res) => {
  *      404:
  *        description: Produto não encontrado para atualização.
  */
-// Rota para atualizar um produto (UPDATE) [cite: 38]
-router.put('/:id', (req, res) => {
-  let product = readProduct();
-  const index = product.findIndex(s => s.id === req.params.id);
-  if (index !== -1) {
-    product[index] = { ...product[index], ...req.body };
-    writeProduct(product);
-    res.json(product[index]);
-  } else {
-    res.status(404).json({ message: "Produto não encontrado para atualização." });
+// Rota para atualizar um produto (UPDATE)
+router.put('/:id', async (req, res) => {
+  try {
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!product) {
+      return res.status(404).json({ message: "Produto não encontrado para atualização." });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -351,14 +346,15 @@ router.put('/:id', (req, res) => {
  *                  example: "Produto não encontrado para exclusão."
  */
 // Rota para apagar um produto
-router.delete('/:id', (req, res) => {
-  let product = readProduct();
-  const filteredSuppliers = product.filter(s => s.id !== req.params.id);
-  if (product.length > filteredSuppliers.length) {
-    writeProduct(filteredSuppliers);
-    res.status(204).send(); // 204 No Content
-  } else {
-    res.status(404).json({ message: "Produto não encontrado para exclusão." });
+router.delete('/:id', async (req, res) => {
+  try {
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Produto não encontrado para exclusão." });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

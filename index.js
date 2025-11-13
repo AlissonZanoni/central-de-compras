@@ -1,9 +1,14 @@
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc'); 
-
+require('dotenv').config();
 const express = require('express');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
+const connectDB = require('./config/db');
+
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
+
+// Conectar ao MongoDB
+connectDB();
 
 app.use(express.json());
 
@@ -43,6 +48,22 @@ app.use('/product', require('./routes/productRoutes'));
 app.use('/store', require('./routes/storeRoutes'));
 app.use('/campaign', require('./routes/campaignRoutes'));
 app.use('/order', require('./routes/orderRoutes'));
+
+// Middleware de tratamento de erros
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    message: 'Algo deu errado!',
+    error: process.env.NODE_ENV === 'development' ? err.message : {}
+  });
+});
+
+// Tratamento de rejeições não capturadas
+process.on('unhandledRejection', (err) => {
+  console.log('REJEIÇÃO NÃO CAPTURADA! Encerrando...');
+  console.log(err.name, err.message);
+  process.exit(1);
+});
 
 app.listen(port, () => {
   console.log(`Servidor rodando em http://localhost:${port}`);

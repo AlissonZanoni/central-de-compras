@@ -1,23 +1,7 @@
-// routes/storeRoutes.js
+// routes/orderRoutes.js
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-
-const orderFilePath = path.join(__dirname, '../db/order.json');
-
-
-// Função para ler os dados do arquivo
-const readOrdem = () => {
-  const data = fs.readFileSync(orderFilePath, 'utf-8');
-  return JSON.parse(data);
-};
-
-// Função para escrever os dados no arquivo
-const writeOrdem = (data) => {
-  fs.writeFileSync(orderFilePath, JSON.stringify(data, null, 2));
-};
+const Order = require('../models/Order');
 
 
 /**
@@ -121,9 +105,13 @@ const writeOrdem = (data) => {
  *                  example: "Erro na requisição."
  */
 // Rota para listar todos as ordem (GET)
-router.get('/', (req, res) => {
-  const order = readOrdem();
-  res.json(order);
+router.get('/', async (req, res) => {
+  try {
+    const orders = await Order.find();
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
@@ -161,13 +149,15 @@ router.get('/', (req, res) => {
  *                  example: "ordem não encontrado."
  */
 // Rota para listar uma ordem por ID
-router.get('/:id', (req, res) => {
-  const orders = readOrdem();
-  const order = orders.find(s => s.id === req.params.id);
-  if (order) {
+router.get('/:id', async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Ordem não encontrado." });
+    }
     res.json(order);
-  } else {
-    res.status(404).json({ message: "Ordem não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -206,13 +196,15 @@ router.get('/:id', (req, res) => {
  *                  example: "Ordem não encontrado."
  */
 // Rota para listar uma ordem por nome
-router.get('/name/:name', (req, res) => {
-  const orders = readOrdem();
-  const order = orders.find(s => s.name === req.params.name);
-  if (order) {
+router.get('/name/:name', async (req, res) => {
+  try {
+    const order = await Order.findOne({ name: req.params.name });
+    if (!order) {
+      return res.status(404).json({ message: "Ordem não encontrado." });
+    }
     res.json(order);
-  } else {
-    res.status(404).json({ message: "Ordem não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -259,15 +251,14 @@ router.get('/name/:name', (req, res) => {
  *                  example: "Erro interno do servidor."
  */
 // Rota para cadastrar uma nova ordem
-router.post('/', (req, res) => {
-  const order = readOrdem();
-  const newSupplier = {
-    id: uuidv4(),
-    ...req.body
-  };
-  order.push(newSupplier);
-  writeOrdem(order);
-  res.status(201).json(newSupplier);
+router.post('/', async (req, res) => {
+  try {
+    const order = new Order(req.body);
+    const newOrder = await order.save();
+    res.status(201).json(newOrder);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 });
 
 /**
@@ -301,16 +292,20 @@ router.post('/', (req, res) => {
  *      404:
  *        description: Ordem não encontrado para atualização.
  */
-// Rota para atualizar uma ordem (UPDATE) [cite: 38]
-router.put('/:id', (req, res) => {
-  let order = readOrdem();
-  const index = order.findIndex(s => s.id === req.params.id);
-  if (index !== -1) {
-    order[index] = { ...order[index], ...req.body };
-    writeOrdem(order);
-    res.json(order[index]);
-  } else {
-    res.status(404).json({ message: "Ordem não encontrado para atualização." });
+// Rota para atualizar uma ordem (UPDATE)
+router.put('/:id', async (req, res) => {
+  try {
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!order) {
+      return res.status(404).json({ message: "Ordem não encontrado para atualização." });
+    }
+    res.json(order);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -346,14 +341,15 @@ router.put('/:id', (req, res) => {
  *                  example: "Ordem não encontrado para exclusão."
  */
 // Rota para apagar uma ordem
-router.delete('/:id', (req, res) => {
-  let order = readOrdem();
-  const filteredSuppliers = order.filter(s => s.id !== req.params.id);
-  if (order.length > filteredSuppliers.length) {
-    writeOrdem(filteredSuppliers);
-    res.status(204).send(); // 204 No Content
-  } else {
-    res.status(404).json({ message: "Ordem não encontrado para exclusão." });
+router.delete('/:id', async (req, res) => {
+  try {
+    const order = await Order.findByIdAndDelete(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Ordem não encontrado para exclusão." });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

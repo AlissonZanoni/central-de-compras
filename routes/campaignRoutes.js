@@ -1,23 +1,7 @@
-// routes/storeRoutes.js
+// routes/campaignRoutes.js
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-
-const campaignFilePath = path.join(__dirname, '../db/campaign.json');
-
-
-// Função para ler os dados do arquivo
-const readCampanha = () => {
-  const data = fs.readFileSync(campaignFilePath, 'utf-8');
-  return JSON.parse(data);
-};
-
-// Função para escrever os dados no arquivo
-const writeCampanha = (data) => {
-  fs.writeFileSync(campaignFilePath, JSON.stringify(data, null, 2));
-};
+const Campaign = require('../models/Campaign');
 
 
 /**
@@ -121,9 +105,13 @@ const writeCampanha = (data) => {
  *                  example: "Erro na requisição."
  */
 // Rota para listar todos os campanhas (GET)
-router.get('/', (req, res) => {
-  const campaign = readCampanha();
-  res.json(campaign);
+router.get('/', async (req, res) => {
+  try {
+    const campaigns = await Campaign.find();
+    res.json(campaigns);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
@@ -161,13 +149,15 @@ router.get('/', (req, res) => {
  *                  example: "campanha não encontrado."
  */
 // Rota para listar uma campanha por ID
-router.get('/:id', (req, res) => {
-  const campaigns = readCampanha();
-  const campaign = campaigns.find(s => s.id === req.params.id);
-  if (campaign) {
+router.get('/:id', async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) {
+      return res.status(404).json({ message: "Campanha não encontrada." });
+    }
     res.json(campaign);
-  } else {
-    res.status(404).json({ message: "Campanha não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -206,13 +196,15 @@ router.get('/:id', (req, res) => {
  *                  example: "Campanha não encontrado."
  */
 // Rota para listar uma campanha por nome
-router.get('/name/:name', (req, res) => {
-  const campaigns = readCampanha();
-  const campaign = campaigns.find(s => s.name === req.params.name);
-  if (campaign) {
+router.get('/name/:name', async (req, res) => {
+  try {
+    const campaign = await Campaign.findOne({ name: req.params.name });
+    if (!campaign) {
+      return res.status(404).json({ message: "Campanha não encontrada." });
+    }
     res.json(campaign);
-  } else {
-    res.status(404).json({ message: "Campanha não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -259,15 +251,14 @@ router.get('/name/:name', (req, res) => {
  *                  example: "Erro interno do servidor."
  */
 // Rota para cadastrar uma nova campanha
-router.post('/', (req, res) => {
-  const campaign = readCampanha();
-  const newSupplier = {
-    id: uuidv4(),
-    ...req.body
-  };
-  campaign.push(newSupplier);
-  writeCampanha(campaign);
-  res.status(201).json(newSupplier);
+router.post('/', async (req, res) => {
+  try {
+    const campaign = new Campaign(req.body);
+    const newCampaign = await campaign.save();
+    res.status(201).json(newCampaign);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 });
 
 /**
@@ -301,16 +292,20 @@ router.post('/', (req, res) => {
  *      404:
  *        description: Campanha não encontrado para atualização.
  */
-// Rota para atualizar uma campanha (UPDATE) [cite: 38]
-router.put('/:id', (req, res) => {
-  let campaign = readCampanha();
-  const index = campaign.findIndex(s => s.id === req.params.id);
-  if (index !== -1) {
-    campaign[index] = { ...campaign[index], ...req.body };
-    writeCampanha(campaign);
-    res.json(campaign[index]);
-  } else {
-    res.status(404).json({ message: "Campanha não encontrado para atualização." });
+// Rota para atualizar uma campanha (UPDATE)
+router.put('/:id', async (req, res) => {
+  try {
+    const campaign = await Campaign.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!campaign) {
+      return res.status(404).json({ message: "Campanha não encontrada para atualização." });
+    }
+    res.json(campaign);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -346,14 +341,15 @@ router.put('/:id', (req, res) => {
  *                  example: "Campanha não encontrado para exclusão."
  */
 // Rota para apagar uma campanha
-router.delete('/:id', (req, res) => {
-  let campaign = readCampanha();
-  const filteredSuppliers = campaign.filter(s => s.id !== req.params.id);
-  if (campaign.length > filteredSuppliers.length) {
-    writeCampanha(filteredSuppliers);
-    res.status(204).send(); // 204 No Content
-  } else {
-    res.status(404).json({ message: "Campanha não encontrado para exclusão." });
+router.delete('/:id', async (req, res) => {
+  try {
+    const campaign = await Campaign.findByIdAndDelete(req.params.id);
+    if (!campaign) {
+      return res.status(404).json({ message: "Campanha não encontrada para exclusão." });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

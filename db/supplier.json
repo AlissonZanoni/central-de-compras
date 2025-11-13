@@ -14,5 +14,13 @@
     "contact_email": "email@example.com",
     "phone_number": "+55 11 91234-5678",
     "status": "of"
+  },
+  {
+    "id": "060cbd34-ca20-4214-b1ac-226be86afc9a",
+    "supplier_name": "Fornecedor Exemplo",
+    "supplier_category": "Eletrônicos",
+    "contact_email": "email@example.com",
+    "phone_number": "+55 11 91234-5678",
+    "status": "on"
   }
 ]

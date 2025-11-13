@@ -1,23 +1,7 @@
 // routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-
-const userFilePath = path.join(__dirname, '../db/user.json');
-
-
-// Função para ler os dados do arquivo
-const readUser = () => {
-  const data = fs.readFileSync(userFilePath, 'utf-8');
-  return JSON.parse(data);
-};
-
-// Função para escrever os dados no arquivo
-const writeUser = (data) => {
-  fs.writeFileSync(userFilePath, JSON.stringify(data, null, 2));
-};
+const User = require('../models/User');
 
 
 /**
@@ -128,9 +112,13 @@ const writeUser = (data) => {
  *                  example: "Erro na requisição."
  */
 // Rota para listar todos os usuarios (GET)
-router.get('/', (req, res) => {
-  const users = readUser();
-  res.json(users);
+router.get('/', async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
@@ -168,13 +156,15 @@ router.get('/', (req, res) => {
  *                  example: "usuario não encontrado."
  */
 // Rota para listar um usuario por ID
-router.get('/:id', (req, res) => {
-  const users = readUser();
-  const user = users.find(s => s.id === req.params.id);
-  if (user) {
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "Usuario não encontrado." });
+    }
     res.json(user);
-  } else {
-    res.status(404).json({ message: "Usuario não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -213,13 +203,15 @@ router.get('/:id', (req, res) => {
  *                  example: "Usuario não encontrado."
  */
 // Rota para listar um usuario por nome
-router.get('/name/:name', (req, res) => {
-  const users = readUser();
-  const user = users.find(s => s.name === req.params.name);
-  if (user) {
+router.get('/name/:name', async (req, res) => {
+  try {
+    const user = await User.findOne({ name: req.params.name });
+    if (!user) {
+      return res.status(404).json({ message: "Usuario não encontrado." });
+    }
     res.json(user);
-  } else {
-    res.status(404).json({ message: "Usuario não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -266,15 +258,14 @@ router.get('/name/:name', (req, res) => {
  *                  example: "Erro interno do servidor."
  */
 // Rota para cadastrar um novo usuario
-router.post('/', (req, res) => {
-  const users = readUser();
-  const newSupplier = {
-    id: uuidv4(),
-    ...req.body
-  };
-  users.push(newSupplier);
-  writeUser(users);
-  res.status(201).json(newSupplier);
+router.post('/', async (req, res) => {
+  try {
+    const user = new User(req.body);
+    const newUser = await user.save();
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 });
 
 /**
@@ -308,16 +299,20 @@ router.post('/', (req, res) => {
  *      404:
  *        description: Usuario não encontrado para atualização.
  */
-// Rota para atualizar um usuario (UPDATE) [cite: 38]
-router.put('/:id', (req, res) => {
-  let users = readUser();
-  const index = users.findIndex(s => s.id === req.params.id);
-  if (index !== -1) {
-    users[index] = { ...users[index], ...req.body };
-    writeUser(users);
-    res.json(users[index]);
-  } else {
-    res.status(404).json({ message: "Usuario não encontrado para atualização." });
+// Rota para atualizar um usuario (UPDATE)
+router.put('/:id', async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!user) {
+      return res.status(404).json({ message: "Usuario não encontrado para atualização." });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -353,14 +348,15 @@ router.put('/:id', (req, res) => {
  *                  example: "Usuario não encontrado para exclusão."
  */
 // Rota para apagar um usuario
-router.delete('/:id', (req, res) => {
-  let users = readUser();
-  const filteredSuppliers = users.filter(s => s.id !== req.params.id);
-  if (users.length > filteredSuppliers.length) {
-    writeUser(filteredSuppliers);
-    res.status(204).send(); // 204 No Content
-  } else {
-    res.status(404).json({ message: "Usuario não encontrado para exclusão." });
+router.delete('/:id', async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "Usuario não encontrado para exclusão." });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

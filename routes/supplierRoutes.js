@@ -1,23 +1,7 @@
 // routes/supplierRoutes.js
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-
-const supplierFilePath = path.join(__dirname, '../db/supplier.json');
-
-
-// Função para ler os dados do arquivo
-const readSuppliers = () => {
-  const data = fs.readFileSync(supplierFilePath, 'utf-8');
-  return JSON.parse(data);
-};
-
-// Função para escrever os dados no arquivo
-const writeSuppliers = (data) => {
-  fs.writeFileSync(supplierFilePath, JSON.stringify(data, null, 2));
-};
+const Supplier = require('../models/Supplier');
 
 
 /**
@@ -120,9 +104,13 @@ const writeSuppliers = (data) => {
  *                  example: "Erro na requisição."
  */
 // Rota para listar todos os fornecedores (GET)
-router.get('/', (req, res) => {
-  const suppliers = readSuppliers();
-  res.json(suppliers);
+router.get('/', async (req, res) => {
+  try {
+    const suppliers = await Supplier.find();
+    res.json(suppliers);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
@@ -160,13 +148,15 @@ router.get('/', (req, res) => {
  *                  example: "Fornecedor não encontrado."
  */
 // Rota para listar um fornecedor por ID
-router.get('/:id', (req, res) => {
-  const suppliers = readSuppliers();
-  const supplier = suppliers.find(s => s.id === req.params.id);
-  if (supplier) {
+router.get('/:id', async (req, res) => {
+  try {
+    const supplier = await Supplier.findById(req.params.id);
+    if (!supplier) {
+      return res.status(404).json({ message: "Fornecedor não encontrado." });
+    }
     res.json(supplier);
-  } else {
-    res.status(404).json({ message: "Fornecedor não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -205,13 +195,15 @@ router.get('/:id', (req, res) => {
  *                  example: "Fornecedor não encontrado."
  */
 // Rota para listar um fornecedor por nome
-router.get('/name/:supplier_name', (req, res) => {
-  const suppliers = readSuppliers();
-  const supplier = suppliers.find(s => s.supplier_name === req.params.supplier_name);
-  if (supplier) {
+router.get('/name/:supplier_name', async (req, res) => {
+  try {
+    const supplier = await Supplier.findOne({ supplier_name: req.params.supplier_name });
+    if (!supplier) {
+      return res.status(404).json({ message: "Fornecedor não encontrado." });
+    }
     res.json(supplier);
-  } else {
-    res.status(404).json({ message: "Fornecedor não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -258,15 +250,14 @@ router.get('/name/:supplier_name', (req, res) => {
  *                  example: "Erro interno do servidor."
  */
 // Rota para cadastrar um novo fornecedor
-router.post('/', (req, res) => {
-  const suppliers = readSuppliers();
-  const newSupplier = {
-    id: uuidv4(),
-    ...req.body
-  };
-  suppliers.push(newSupplier);
-  writeSuppliers(suppliers);
-  res.status(201).json(newSupplier);
+router.post('/', async (req, res) => {
+  try {
+    const supplier = new Supplier(req.body);
+    const newSupplier = await supplier.save();
+    res.status(201).json(newSupplier);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 });
 
 /**
@@ -300,16 +291,20 @@ router.post('/', (req, res) => {
  *      404:
  *        description: Fornecedor não encontrado para atualização.
  */
-// Rota para atualizar um fornecedor (UPDATE) [cite: 38]
-router.put('/:id', (req, res) => {
-  let suppliers = readSuppliers();
-  const index = suppliers.findIndex(s => s.id === req.params.id);
-  if (index !== -1) {
-    suppliers[index] = { ...suppliers[index], ...req.body };
-    writeSuppliers(suppliers);
-    res.json(suppliers[index]);
-  } else {
-    res.status(404).json({ message: "Fornecedor não encontrado para atualização." });
+// Rota para atualizar um fornecedor (UPDATE)
+router.put('/:id', async (req, res) => {
+  try {
+    const supplier = await Supplier.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!supplier) {
+      return res.status(404).json({ message: "Fornecedor não encontrado para atualização." });
+    }
+    res.json(supplier);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -345,14 +340,15 @@ router.put('/:id', (req, res) => {
  *                  example: "Fornecedor não encontrado para exclusão."
  */
 // Rota para apagar um fornecedor
-router.delete('/:id', (req, res) => {
-  let suppliers = readSuppliers();
-  const filteredSuppliers = suppliers.filter(s => s.id !== req.params.id);
-  if (suppliers.length > filteredSuppliers.length) {
-    writeSuppliers(filteredSuppliers);
-    res.status(204).send(); // 204 No Content
-  } else {
-    res.status(404).json({ message: "Fornecedor não encontrado para exclusão." });
+router.delete('/:id', async (req, res) => {
+  try {
+    const supplier = await Supplier.findByIdAndDelete(req.params.id);
+    if (!supplier) {
+      return res.status(404).json({ message: "Fornecedor não encontrado para exclusão." });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

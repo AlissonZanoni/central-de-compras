@@ -1,23 +1,7 @@
 // routes/storeRoutes.js
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-
-const storeFilePath = path.join(__dirname, '../db/store.json');
-
-
-// Função para ler os dados do arquivo
-const readLoja = () => {
-  const data = fs.readFileSync(storeFilePath, 'utf-8');
-  return JSON.parse(data);
-};
-
-// Função para escrever os dados no arquivo
-const writeLoja = (data) => {
-  fs.writeFileSync(storeFilePath, JSON.stringify(data, null, 2));
-};
+const Store = require('../models/Store');
 
 
 /**
@@ -129,9 +113,13 @@ const writeLoja = (data) => {
  *                  example: "Erro na requisição."
  */
 // Rota para listar todos os lojas (GET)
-router.get('/', (req, res) => {
-  const store = readLoja();
-  res.json(store);
+router.get('/', async (req, res) => {
+  try {
+    const stores = await Store.find();
+    res.json(stores);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
@@ -169,13 +157,15 @@ router.get('/', (req, res) => {
  *                  example: "loja não encontrado."
  */
 // Rota para listar uma loja por ID
-router.get('/:id', (req, res) => {
-  const stores = readLoja();
-  const store = stores.find(s => s.id === req.params.id);
-  if (store) {
+router.get('/:id', async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.id);
+    if (!store) {
+      return res.status(404).json({ message: "Loja não encontrado." });
+    }
     res.json(store);
-  } else {
-    res.status(404).json({ message: "Loja não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -214,13 +204,15 @@ router.get('/:id', (req, res) => {
  *                  example: "Loja não encontrado."
  */
 // Rota para listar uma loja por nome
-router.get('/name/:name', (req, res) => {
-  const stores = readLoja();
-  const store = stores.find(s => s.store_name === req.params.store_name);
-  if (store) {
+router.get('/name/:name', async (req, res) => {
+  try {
+    const store = await Store.findOne({ name: req.params.name });
+    if (!store) {
+      return res.status(404).json({ message: "Loja não encontrado." });
+    }
     res.json(store);
-  } else {
-    res.status(404).json({ message: "Loja não encontrado." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -267,15 +259,14 @@ router.get('/name/:name', (req, res) => {
  *                  example: "Erro interno do servidor."
  */
 // Rota para cadastrar uma nova loja
-router.post('/', (req, res) => {
-  const store = readLoja();
-  const newSupplier = {
-    id: uuidv4(),
-    ...req.body
-  };
-  store.push(newSupplier);
-  writeLoja(store);
-  res.status(201).json(newSupplier);
+router.post('/', async (req, res) => {
+  try {
+    const store = new Store(req.body);
+    const newStore = await store.save();
+    res.status(201).json(newStore);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 });
 
 /**
@@ -309,16 +300,20 @@ router.post('/', (req, res) => {
  *      404:
  *        description: Loja não encontrado para atualização.
  */
-// Rota para atualizar uma loja (UPDATE) [cite: 38]
-router.put('/:id', (req, res) => {
-  let store = readLoja();
-  const index = store.findIndex(s => s.id === req.params.id);
-  if (index !== -1) {
-    store[index] = { ...store[index], ...req.body };
-    writeLoja(store);
-    res.json(store[index]);
-  } else {
-    res.status(404).json({ message: "Loja não encontrado para atualização." });
+// Rota para atualizar uma loja (UPDATE)
+router.put('/:id', async (req, res) => {
+  try {
+    const store = await Store.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!store) {
+      return res.status(404).json({ message: "Loja não encontrado para atualização." });
+    }
+    res.json(store);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -354,14 +349,15 @@ router.put('/:id', (req, res) => {
  *                  example: "Loja não encontrado para exclusão."
  */
 // Rota para apagar uma loja
-router.delete('/:id', (req, res) => {
-  let store = readLoja();
-  const filteredSuppliers = store.filter(s => s.id !== req.params.id);
-  if (store.length > filteredSuppliers.length) {
-    writeLoja(filteredSuppliers);
-    res.status(204).send(); // 204 No Content
-  } else {
-    res.status(404).json({ message: "Loja não encontrado para exclusão." });
+router.delete('/:id', async (req, res) => {
+  try {
+    const store = await Store.findByIdAndDelete(req.params.id);
+    if (!store) {
+      return res.status(404).json({ message: "Loja não encontrado para exclusão." });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
