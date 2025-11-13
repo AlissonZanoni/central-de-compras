@@ -1,5 +1,5 @@
 {
-  "name": "central-de-compras",
+  "name": "central-de-compras-backend",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
