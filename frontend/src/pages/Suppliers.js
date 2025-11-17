@@ -16,7 +16,7 @@ export default function Suppliers() {
     { name: 'supplier_category', label: 'Categoria', placeholder: 'Ex: Eletrônicos' },
     { name: 'contact_email', label: 'Email', placeholder: 'exemplo@email.com', type: 'email' },
     { name: 'phone_number', label: 'Telefone', placeholder: '(11) 9999-9999' },
-    { name: 'status', label: 'Status', placeholder: 'on ou off' },
+    { name: 'status', label: 'Status', type: 'select', options: ['on', 'off'] },
   ];
 
   useEffect(() => {

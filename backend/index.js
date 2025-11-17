@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const connectDB = require('./config/db');
@@ -9,6 +10,9 @@ const port = process.env.PORT || 3000;
 
 // Conectar ao MongoDB
 connectDB();
+
+// Middleware CORS
+app.use(cors());
 
 app.use(express.json());
 
