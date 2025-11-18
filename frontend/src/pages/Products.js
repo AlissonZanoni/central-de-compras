@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { productService } from '../services/api';
+import { productService, supplierService } from '../services/api';
 import Modal from '../components/Modal';
 import './CRUD.css';
 import { toast } from 'react-toastify';
 
 export default function Products() {
   const [products, setProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -13,16 +14,32 @@ export default function Products() {
 
   const fields = [
     { name: 'name', label: 'Nome do Produto', placeholder: 'Digite o nome' },
-    { name: 'description', label: 'Descrição', placeholder: 'Descrição do produto' },
-    { name: 'price', label: 'Preço', placeholder: '100.00', type: 'number' },
-    { name: 'stock_quantity', label: 'Quantidade em Estoque', placeholder: '50', type: 'number' },
-    { name: 'supplier_id', label: 'ID do Fornecedor', placeholder: 'ID do fornecedor' },
-    { name: 'status', label: 'Status', placeholder: 'on ou off' },
+    { name: 'description', label: 'Descrição', placeholder: 'Descreva o produto' },
+    { name: 'price', label: 'Preço', placeholder: '0.00', type: 'number' },
+    { name: 'stock_quantity', label: 'Quantidade em Estoque', placeholder: '0', type: 'number' },
+    { 
+      name: 'supplier_id', 
+      label: 'Fornecedor', 
+      type: 'select', 
+      options: suppliers.map(s => ({ value: s._id, label: s.supplier_name }))
+    },
+    { name: 'status', label: 'Status', type: 'select', options: ['on', 'off'] },
   ];
 
   useEffect(() => {
+    fetchSuppliers();
     fetchProducts();
   }, []);
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await supplierService.getAll();
+      setSuppliers(response.data);
+    } catch (error) {
+      toast.error('Erro ao carregar fornecedores');
+      console.error(error);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -36,6 +53,11 @@ export default function Products() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getSupplierName = (supplierId) => {
+    const supplier = suppliers.find(s => s._id === supplierId);
+    return supplier ? supplier.supplier_name : 'N/A';
   };
 
   const handleOpenModal = (product = null) => {
@@ -121,6 +143,7 @@ export default function Products() {
                 <th>Descrição</th>
                 <th>Preço</th>
                 <th>Estoque</th>
+                <th>Fornecedor</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -130,8 +153,9 @@ export default function Products() {
                 <tr key={product._id}>
                   <td>{product.name}</td>
                   <td>{product.description}</td>
-                  <td>R$ {parseFloat(product.price).toFixed(2)}</td>
+                  <td>R$ {product.price?.toFixed(2)}</td>
                   <td>{product.stock_quantity}</td>
+                  <td>{getSupplierName(product.supplier_id)}</td>
                   <td>
                     <span className={`status ${product.status}`}>
                       {product.status === 'on' ? 'Ativo' : 'Inativo'}

@@ -17,7 +17,7 @@ export default function Stores() {
     { name: 'address', label: 'Endereço', placeholder: 'Rua, número, cidade' },
     { name: 'phone_number', label: 'Telefone', placeholder: '(11) 9999-9999' },
     { name: 'contact_email', label: 'Email', placeholder: 'exemplo@email.com', type: 'email' },
-    { name: 'status', label: 'Status', placeholder: 'on ou off' },
+    { name: 'status', label: 'Status', type: 'select', options: ['on', 'off'] },
   ];
 
   useEffect(() => {

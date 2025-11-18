@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { campaignService } from '../services/api';
+import { campaignService, storeService, productService } from '../services/api';
 import Modal from '../components/Modal';
 import './CRUD.css';
 import { toast } from 'react-toastify';
 
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -16,16 +18,48 @@ export default function Campaigns() {
     { name: 'start_date', label: 'Data de Início', placeholder: '2024-01-01', type: 'date' },
     { name: 'end_date', label: 'Data de Término', placeholder: '2024-01-31', type: 'date' },
     { name: 'discount_percentage', label: 'Desconto (%)', placeholder: '10%' },
-    { name: 'store_id', label: 'ID da Loja', placeholder: 'ID da loja' },
-    { name: 'item', label: 'Item', placeholder: 'Nome do item' },
+    { 
+      name: 'store_id', 
+      label: 'Loja', 
+      type: 'select', 
+      options: stores.map(s => ({ value: s._id, label: s.name }))
+    },
+    { 
+      name: 'item', 
+      label: 'Produto', 
+      type: 'select', 
+      options: products.map(p => ({ value: p._id, label: p.name }))
+    },
     { name: 'total_amount', label: 'Valor Total', placeholder: '1500.00', type: 'number' },
-    { name: 'status', label: 'Status', placeholder: 'Ativa, Inativa, Planejada' },
+    { name: 'status', label: 'Status', type: 'select', options: ['Ativa', 'Inativa', 'Planejada'] },
     { name: 'date', label: 'Data', placeholder: '2024-01-15', type: 'date' },
   ];
 
   useEffect(() => {
+    fetchStores();
+    fetchProducts();
     fetchCampaigns();
   }, []);
+
+  const fetchStores = async () => {
+    try {
+      const response = await storeService.getAll();
+      setStores(response.data);
+    } catch (error) {
+      toast.error('Erro ao carregar lojas');
+      console.error(error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const response = await productService.getAll();
+      setProducts(response.data);
+    } catch (error) {
+      toast.error('Erro ao carregar produtos');
+      console.error(error);
+    }
+  };
 
   const fetchCampaigns = async () => {
     try {
@@ -39,6 +73,16 @@ export default function Campaigns() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getStoreName = (storeId) => {
+    const store = stores.find(s => s._id === storeId);
+    return store ? store.name : 'N/A';
+  };
+
+  const getProductName = (productId) => {
+    const product = products.find(p => p._id === productId);
+    return product ? product.name : 'N/A';
   };
 
   const handleOpenModal = (campaign = null) => {
@@ -121,7 +165,8 @@ export default function Campaigns() {
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>Item</th>
+                <th>Loja</th>
+                <th>Produto</th>
                 <th>Valor Total</th>
                 <th>Status</th>
                 <th>Data de Início</th>
@@ -132,7 +177,8 @@ export default function Campaigns() {
               {campaigns.map(campaign => (
                 <tr key={campaign._id}>
                   <td>{campaign.name}</td>
-                  <td>{campaign.item}</td>
+                  <td>{getStoreName(campaign.store_id)}</td>
+                  <td>{getProductName(campaign.item)}</td>
                   <td>R$ {parseFloat(campaign.total_amount).toFixed(2)}</td>
                   <td>{campaign.status}</td>
                   <td>{new Date(campaign.start_date).toLocaleDateString('pt-BR')}</td>

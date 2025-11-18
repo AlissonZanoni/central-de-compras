@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { orderService } from '../services/api';
+import { orderService, storeService, productService } from '../services/api';
 import Modal from '../components/Modal';
 import './CRUD.css';
 import { toast } from 'react-toastify';
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -16,16 +18,48 @@ export default function Orders() {
     { name: 'start_date', label: 'Data de Início', placeholder: '2024-01-01', type: 'date' },
     { name: 'end_date', label: 'Data de Término', placeholder: '2024-01-31', type: 'date' },
     { name: 'discount_percentage', label: 'Desconto (%)', placeholder: '10%' },
-    { name: 'store_id', label: 'ID da Loja', placeholder: 'ID da loja' },
-    { name: 'item', label: 'Item', placeholder: 'Nome do item' },
+    { 
+      name: 'store_id', 
+      label: 'Loja', 
+      type: 'select', 
+      options: stores.map(s => ({ value: s._id, label: s.name }))
+    },
+    { 
+      name: 'item', 
+      label: 'Produto', 
+      type: 'select', 
+      options: products.map(p => ({ value: p._id, label: p.name }))
+    },
     { name: 'total_amount', label: 'Valor Total', placeholder: '1500.00', type: 'number' },
-    { name: 'status', label: 'Status', placeholder: 'Pendente, Processando, Concluído' },
+    { name: 'status', label: 'Status', type: 'select', options: ['Pendente', 'Processando', 'Concluído'] },
     { name: 'date', label: 'Data', placeholder: '2024-01-15', type: 'date' },
   ];
 
   useEffect(() => {
+    fetchStores();
+    fetchProducts();
     fetchOrders();
   }, []);
+
+  const fetchStores = async () => {
+    try {
+      const response = await storeService.getAll();
+      setStores(response.data);
+    } catch (error) {
+      toast.error('Erro ao carregar lojas');
+      console.error(error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const response = await productService.getAll();
+      setProducts(response.data);
+    } catch (error) {
+      toast.error('Erro ao carregar produtos');
+      console.error(error);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -39,6 +73,16 @@ export default function Orders() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getStoreName = (storeId) => {
+    const store = stores.find(s => s._id === storeId);
+    return store ? store.name : 'N/A';
+  };
+
+  const getProductName = (productId) => {
+    const product = products.find(p => p._id === productId);
+    return product ? product.name : 'N/A';
   };
 
   const handleOpenModal = (order = null) => {
@@ -121,7 +165,8 @@ export default function Orders() {
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>Item</th>
+                <th>Loja</th>
+                <th>Produto</th>
                 <th>Valor Total</th>
                 <th>Status</th>
                 <th>Data</th>
@@ -132,7 +177,8 @@ export default function Orders() {
               {orders.map(order => (
                 <tr key={order._id}>
                   <td>{order.name}</td>
-                  <td>{order.item}</td>
+                  <td>{getStoreName(order.store_id)}</td>
+                  <td>{getProductName(order.item)}</td>
                   <td>R$ {parseFloat(order.total_amount).toFixed(2)}</td>
                   <td>{order.status}</td>
                   <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>

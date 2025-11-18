@@ -15,7 +15,19 @@ const formatPhone = (value) => {
   return formatted || value;
 };
 
-export default function Modal({ isOpen, onClose, onSubmit, title, fields, initialData }) {
+// Função para obter o rótulo correto da opção
+const getOptionLabel = (value, fieldName) => {
+  // Mapeamento de valores para rótulos legíveis
+  const labelMap = {
+    'on': 'Ativo',
+    'off': 'Inativo',
+    'admin': 'Admin',
+    'user': 'Usuário'
+  };
+  return labelMap[value] || value;
+};
+
+export default function Modal({ isOpen, onClose, onSubmit, title, fields, initialData, onStoreChange }) {
   const [formData, setFormData] = useState({});
 
   useEffect(() => {
@@ -39,6 +51,11 @@ export default function Modal({ isOpen, onClose, onSubmit, title, fields, initia
       ...prev,
       [name]: finalValue
     }));
+
+    // Notificar quando a loja for selecionada
+    if (name === 'store_id' && onStoreChange) {
+      onStoreChange(value);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -69,11 +86,18 @@ export default function Modal({ isOpen, onClose, onSubmit, title, fields, initia
                   required={field.required !== false}
                 >
                   <option value="">-- Selecione --</option>
-                  {field.options?.map(option => (
-                    <option key={option} value={option}>
-                      {option === 'on' ? 'Ativo' : 'Inativo'}
-                    </option>
-                  ))}
+                  {field.options?.map(option => {
+                    // Suportar tanto strings simples como objetos com value e label
+                    const isObject = typeof option === 'object';
+                    const optionValue = isObject ? option.value : option;
+                    const optionLabel = isObject ? option.label : getOptionLabel(option);
+                    
+                    return (
+                      <option key={optionValue} value={optionValue}>
+                        {optionLabel}
+                      </option>
+                    );
+                  })}
                 </select>
               ) : (
                 <input

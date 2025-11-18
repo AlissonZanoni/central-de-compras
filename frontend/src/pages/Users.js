@@ -16,8 +16,8 @@ export default function Users() {
     { name: 'contact_email', label: 'Email', placeholder: 'exemplo@email.com', type: 'email' },
     { name: 'user', label: 'Usuário', placeholder: 'username' },
     { name: 'pwd', label: 'Senha', placeholder: 'Digite a senha', type: 'password' },
-    { name: 'level', label: 'Nível', placeholder: 'admin ou user' },
-    { name: 'status', label: 'Status', placeholder: 'on ou off' },
+    { name: 'level', label: 'Nível', type: 'select', options: ['admin', 'user'] },
+    { name: 'status', label: 'Status', type: 'select', options: ['on', 'off'] },
   ];
 
   useEffect(() => {
@@ -131,7 +131,18 @@ export default function Users() {
                   <td>{user.name}</td>
                   <td>{user.contact_email}</td>
                   <td>{user.user}</td>
-                  <td>{user.level}</td>
+                  <td>
+                    <span className="level-badge" style={{
+                      backgroundColor: user.level === 'admin' ? '#667eea' : '#48bb78',
+                      color: 'white',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '4px',
+                      fontSize: '0.85rem',
+                      fontWeight: '500'
+                    }}>
+                      {user.level === 'admin' ? 'Admin' : 'Usuário'}
+                    </span>
+                  </td>
                   <td>
                     <span className={`status ${user.status}`}>
                       {user.status === 'on' ? 'Ativo' : 'Inativo'}
